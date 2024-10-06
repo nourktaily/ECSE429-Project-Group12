@@ -312,17 +312,17 @@ public class TodosTest {
         System.out.println(response.body());
     }
 
-    // test fails
-//    @Test
-//    public void testGetAllProjectsForNonExistentTodo() throws IOException, InterruptedException {
-//        HttpRequest request = HttpRequest.newBuilder()
-//                .uri(URI.create("http://localhost:4567/todos/999/tasksof"))
-//                .GET().build();
-//
-//        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-//        assertEquals(404, response.statusCode());
-//        System.out.println(response.body());
-//    }
+    @Test
+    public void testDeleteNonExistentTodo() throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/todos/999")) // Non-existent ID
+                .DELETE()
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(404, response.statusCode()); // Expecting 404 for non-existent ID
+        System.out.println(response.body());
+    }
 
     @Test
     public void testGetTodosByDoneStatusTrue() throws IOException, InterruptedException {
