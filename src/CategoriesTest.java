@@ -11,7 +11,7 @@ import java.util.HashMap;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class CategoryTest {
+public class CategoriesTest {
     private static final String BASE_URL = "http://localhost:4567/categories";
     private HttpClient client;
     private ObjectMapper objectMapper;
