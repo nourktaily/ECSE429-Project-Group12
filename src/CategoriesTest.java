@@ -74,7 +74,7 @@ public class CategoriesTest {
     // create Category with Empty Title
     @Test
     public void testCreateCategoryWithEmptyTitle() throws IOException, InterruptedException {
-        String requestBody = "{ \"title\": \"\" }";
+        String requestBody = "{ \"title\": \"\", \"description\": \"creation without a title\" }";
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:4567/categories"))
                 .header("Content-Type", "application/json")
@@ -91,7 +91,7 @@ public class CategoriesTest {
     // create Category with ID
     @Test
     public void testCreateCategoryWithID() throws IOException, InterruptedException {
-        String requestBody = "{ \"description\": \"testing\", \"id\": \"5\", \"title\": \"Creating Category Instance\" }";
+        String requestBody = "{ \"description\": \"bad api\", \"id\": \"8\", \"title\": \"car vehicle\" }";
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:4567/categories"))
                 .header("Content-Type", "application/json")
@@ -133,7 +133,7 @@ public class CategoriesTest {
     @Test
     public void testGetCategoryWithNonExistentId() throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/categories/213"))
+                .uri(URI.create("http://localhost:4567/categories/3"))
                 .GET().build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
@@ -168,7 +168,7 @@ public class CategoriesTest {
     // update an instance of Category ID with Title
     @Test
     public void testUpdateCategoryWithTitleOnly() throws IOException, InterruptedException {
-        String requestBody = "{ \"title\": \" new title \"}";
+        String requestBody = "{ \"title\": \" Couch \"}";
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:4567/categories/2"))
                 .header("Content-Type", "application/json")
@@ -198,9 +198,9 @@ public class CategoriesTest {
     // update an instance of Category ID with nonexistent ID
     @Test
     public void UpdateCategoryWithNonExistentID() throws IOException, InterruptedException {
-        String requestBody = "{ \"title\": \" new title \" }";
+        String requestBody = "{ \"title\": \" Chocolate \" }";
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/categories/7"))
+                .uri(URI.create("http://localhost:4567/categories/29"))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(""))
                 .build();
