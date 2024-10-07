@@ -187,7 +187,7 @@ public class CategoriesTest {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:4567/categories/2"))
                 .header("Content-Type", "application/json")
-                .PUT(HttpRequest.BodyPublishers.ofString(requestBody))
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
