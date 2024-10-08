@@ -1,7 +1,5 @@
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.jupiter.api.*;
 
 import java.io.IOException;
@@ -12,43 +10,68 @@ import java.net.http.HttpResponse;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class TodosTest {
+@TestMethodOrder(MethodOrderer.Random.class)
 
+public class TodosTest {
     private final HttpClient client = HttpClient.newHttpClient();
     public static String categoryId = "0";
     public static String taskId = "0";
-
-    @BeforeAll
-    public static void setup() throws IOException, InterruptedException {
+    public static String todoId = "0";
+    @BeforeEach
+    public void setup_foreach() throws IOException, InterruptedException {
+        String requestBody = "{ \"title\": \"s aute irure dolor i\", \"doneStatus\": false, \"description\": \"sse cillum dolore eu\" }";
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/todos"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                .build();
+        HttpClient client = HttpClient.newHttpClient();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(201, response.statusCode());
+        String responseBody = response.body();
+        todoId = new ObjectMapper().readTree(responseBody).get("id").asText();
         taskId = createTaskOfTodo();
         categoryId = createCategory();
+    }
+
+    @AfterEach
+    public void teardown() throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/todos/" + todoId))
+                .DELETE()
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(200, response.statusCode());
+        System.out.println(response.body());
+    }
+    @Test
+    public void shouldRedirectToMainPage() throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567"))
+                .GET().build();
+
+        HttpResponse<Void> response = client.send(request, HttpResponse.BodyHandlers.discarding());
+        assertEquals(302, response.statusCode(), "Expected redirect from main page");
     }
        public static String createTaskOfTodo() throws IOException, InterruptedException {
         // Initialize the HttpClient
            HttpClient client = HttpClient.newHttpClient();
 
-        // Create the request body
         String requestBody = "{ \"Id\": \"1\" }";
 
-        // Build the HTTP request
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/todos/1/tasksof"))
+                .uri(URI.create("http://localhost:4567/todos/" + todoId + "/tasksof"))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
 
-        // Send the request and capture the response
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-        // Assert that the response status code is 201 Created
         assertEquals(201, response.statusCode());
-
-        // Optionally, print the response body for debugging
         System.out.println(response.body());
         return "1";
     }
-
-
 
     public static String createCategory() throws IOException, InterruptedException {
         // Initialize the HttpClient
@@ -69,7 +92,7 @@ public class TodosTest {
 
         String linkBody = "{ \"Id\": \"" + id + "\" }";
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/todos/1/categories"))
+                .uri(URI.create("http://localhost:4567/todos/" +todoId +"/categories"))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(linkBody))
                 .build();
@@ -130,8 +153,19 @@ public class TodosTest {
     }
     @Test
     public void testDeleteTodo() throws IOException, InterruptedException {
+        String requestBody = "{ \"title\": \"s aute irure dolor i\", \"doneStatus\": false, \"description\": \"sse cillum dolore eu\" }";
+        HttpRequest request_create = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/todos"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                .build();
+        HttpClient client = HttpClient.newHttpClient();
+        HttpResponse<String> response_create = client.send(request_create, HttpResponse.BodyHandlers.ofString());
+        assertEquals(201, response_create.statusCode());
+        String responseBody = response_create.body();
+        String todoId_delete = new ObjectMapper().readTree(responseBody).get("id").asText();
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/todos/3"))
+                .uri(URI.create("http://localhost:4567/todos/" + todoId_delete))
                 .DELETE()
                 .build();
 
@@ -142,7 +176,7 @@ public class TodosTest {
     @Test
     public void testGetTodoById() throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/todos/1"))
+                .uri(URI.create("http://localhost:4567/todos/" + todoId))
                 .GET().build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
@@ -153,7 +187,7 @@ public class TodosTest {
     @Test
     public void testGetNonExistentTodo() throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/todos/999"))
+                .uri(URI.create("http://localhost:4567/todos/-1"))
                 .GET().build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
@@ -164,7 +198,7 @@ public class TodosTest {
     @Test
     public void testHeadTodoById() throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/todos/1"))
+                .uri(URI.create("http://localhost:4567/todos/" + todoId))
                 .method("HEAD", HttpRequest.BodyPublishers.noBody())
                 .build();
 
@@ -175,7 +209,7 @@ public class TodosTest {
     @Test
     public void testCreateTodoWithIncorrectId() throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/todos/999"))
+                .uri(URI.create("http://localhost:4567/todos/-1"))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString("")) // Empty body
                 .build();
@@ -188,7 +222,7 @@ public class TodosTest {
     public void testUpdateTodoWithID() throws IOException, InterruptedException {
         String requestBody = "{ \"title\": \" new title \", \"doneStatus\": false, \"description\": \"new description\"}";
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/todos/1"))
+                .uri(URI.create("http://localhost:4567/todos/" + todoId))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody)) // Empty body
                 .build();
@@ -202,13 +236,13 @@ public class TodosTest {
     public void testUpdateTodoDoneStatusOnly() throws IOException, InterruptedException {
         String requestBody = "{ \"doneStatus\": true }";
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/todos/7"))
+                .uri(URI.create("http://localhost:4567/todos/" + todoId))
                 .header("Content-Type", "application/json")
                 .PUT(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        assertEquals(404, response.statusCode());
+        assertEquals(400, response.statusCode());
         System.out.println(response.body());
     }
 
@@ -216,7 +250,7 @@ public class TodosTest {
     public void testUpdateTodoWithAllFields() throws IOException, InterruptedException {
         String requestBody = "{ \"title\": \"Updated Title\", \"doneStatus\": false, \"description\": \"Updated Description\" }";
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/todos/1"))
+                .uri(URI.create("http://localhost:4567/todos/" + todoId))
                 .header("Content-Type", "application/json")
                 .PUT(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
@@ -232,7 +266,7 @@ public class TodosTest {
     public void testUpdateTodoTitle() throws IOException, InterruptedException {
         String requestBody = "{ \"title\": \"New Title\" }";
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/todos/1"))
+                .uri(URI.create("http://localhost:4567/todos/" + todoId))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
@@ -246,7 +280,7 @@ public class TodosTest {
     public void testUpdateNonExistentTodo() throws IOException, InterruptedException {
         String requestBody = "{ \"title\": \"Title\" }";
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/todos/999"))
+                .uri(URI.create("http://localhost:4567/todos/-1"))
                 .header("Content-Type", "application/json")
                 .PUT(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
@@ -279,10 +313,10 @@ public class TodosTest {
     }
 
     @Test
-    public void testUpdateTodoWithMissingTitleField() throws IOException, InterruptedException {
+    public void testUpdateTodoWithMissingTitleFieldFails() throws IOException, InterruptedException {
         String requestBody = "{ \"doneStatus\": false }";
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/todos/7"))
+                .uri(URI.create("http://localhost:4567/todos/" + todoId))
                 .header("Content-Type", "application/json")
                 .PUT(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
@@ -295,10 +329,24 @@ public class TodosTest {
         System.out.println("Response body: " + response.body());
     }
     @Test
+    public void testUpdateTodoWithMissingTitleFieldPasses() throws IOException, InterruptedException {
+        String requestBody = "{ \"doneStatus\": false }";
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/todos/" + todoId))
+                .header("Content-Type", "application/json")
+                .PUT(HttpRequest.BodyPublishers.ofString(requestBody))
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(400, response.statusCode(), "Expected to fail when updating without title field.");
+        System.out.println("Response status code: " + response.statusCode());
+        System.out.println("Response body: " + response.body());
+    }
+    @Test
     public void testCreateLinkBetweenTodoAndCategory() throws IOException, InterruptedException {
         String requestBody = "{ \"Id\": \"" + categoryId + "\" }";
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/todos/1/categories"))
+                .uri(URI.create("http://localhost:4567/todos/" + todoId + "/categories"))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
@@ -310,9 +358,9 @@ public class TodosTest {
 
     @Test
     public void testCreateLinkWithInvalidCategoryId() throws IOException, InterruptedException {
-        String requestBody = "{ \"Id\": \"999\" }";
+        String requestBody = "{ \"Id\": \"-1\" }";
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/todos/1/categories"))
+                .uri(URI.create("http://localhost:4567/todos/" + todoId + "/categories"))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
@@ -325,7 +373,7 @@ public class TodosTest {
     @Test
     public void testDeleteLinkBetweenTodoAndCategory() throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/todos/1/categories/" + categoryId))
+                .uri(URI.create("http://localhost:4567/todos/" + todoId + "/categories/" + categoryId))
                 .DELETE()
                 .build();
 
@@ -337,7 +385,7 @@ public class TodosTest {
     @Test
     public void testDeleteNonExistentLinkBetweenTodoAndCategory() throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/todos/1/categories/999"))
+                .uri(URI.create("http://localhost:4567/todos/" + todoId + "/categories/-1"))
                 .DELETE()
                 .build();
 
@@ -349,7 +397,7 @@ public class TodosTest {
     @Test
     public void testGetTasksOfTodo() throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/todos/1/tasksof"))
+                .uri(URI.create("http://localhost:4567/todos/" + todoId + "/tasksof"))
                 .GET().build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
@@ -358,9 +406,9 @@ public class TodosTest {
     }
 
     @Test
-    public void testGetTasksofInvalidTodoId() throws IOException, InterruptedException {
+    public void testGetTasksofInvalidTodoIdFails() throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/todos/999/tasksof"))
+                .uri(URI.create("http://localhost:4567/todos/-1/tasksof"))
                 .header("Content-Type", "application/json")
                 .GET()
                 .build();
@@ -370,9 +418,21 @@ public class TodosTest {
 
     }
     @Test
+    public void testGetTasksofInvalidTodoIdPasses() throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/todos/-1/tasksof"))
+                .header("Content-Type", "application/json")
+                .GET()
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        // Assert that the response is not successful (expecting an error)
+        assertEquals(200, response.statusCode(), "Expected a 404 Not Found status code for invalid todo ID.");
+
+    }
+    @Test
     public void testHeadTasksOfTodo() throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/todos/1/tasksof"))
+                .uri(URI.create("http://localhost:4567/todos/" + todoId + "1/tasksof"))
                 .method("HEAD", HttpRequest.BodyPublishers.noBody())
                 .build();
 
@@ -384,7 +444,7 @@ public class TodosTest {
     public void testCreateNewTaskOfTodo() throws IOException, InterruptedException {
         String requestBody = "{ \"Id\": \"1\" }";
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/todos/1/tasksof"))
+                .uri(URI.create("http://localhost:4567/todos/" + todoId + "/tasksof"))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
@@ -397,7 +457,7 @@ public class TodosTest {
     @Test
     public void testDeleteTaskOfTodo() throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/todos/1/tasksof/1"))
+                .uri(URI.create("http://localhost:4567/todos/" + todoId + "/tasksof/1"))
                 .DELETE()
                 .build();
 
