@@ -133,7 +133,7 @@ public class CategoriesTest {
     @Test
     public void testGetCategoryWithNonExistentId() throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/categories/3"))
+                .uri(URI.create("http://localhost:4567/categories/999"))
                 .GET().build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
@@ -200,7 +200,7 @@ public class CategoriesTest {
     public void UpdateCategoryWithNonExistentID() throws IOException, InterruptedException {
         String requestBody = "{ \"title\": \" Chocolate \" }";
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/categories/29"))
+                .uri(URI.create("http://localhost:4567/categories/999"))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(""))
                 .build();

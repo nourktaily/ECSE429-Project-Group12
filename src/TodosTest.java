@@ -16,6 +16,36 @@ public class TodosTest {
     private final HttpClient client = HttpClient.newHttpClient();
     ObjectMapper objectMapper = new ObjectMapper();
     public static String categoryId = "0";
+    public static String taskId = "0";
+
+    @BeforeAll
+    public static void setup() throws IOException, InterruptedException {
+        taskId = createTaskOfTodo();
+    }
+       public static String createTaskOfTodo() throws IOException, InterruptedException {
+        // Initialize the HttpClient
+           HttpClient client = HttpClient.newHttpClient();
+
+        // Create the request body
+        String requestBody = "{ \"Id\": \"1\" }";
+
+        // Build the HTTP request
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/todos/1/tasksof"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                .build();
+
+        // Send the request and capture the response
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        // Assert that the response status code is 201 Created
+        assertEquals(201, response.statusCode());
+
+        // Optionally, print the response body for debugging
+        System.out.println(response.body());
+        return "1";
+    }
 
 
     public void createCategory() throws IOException, InterruptedException {
