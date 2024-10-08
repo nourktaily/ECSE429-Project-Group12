@@ -404,5 +404,55 @@ public class ProjectsTest {
         assertEquals(200, response.statusCode());
         System.out.println(response.body());
     }
+
+    @Test
+    public void testGetProjectsByInvalidParameter() throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/projects?name="))
+                .GET().build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(400, response.statusCode()); // WILL FAIL
+        //expects to be 400 BAD REQUEST but, we know form the exploratory tests that it is return 200 Ok
+        System.out.println(response.body());
+    }
+
+    @Test
+    public void testMalformedJsonPayload() throws IOException, InterruptedException {
+        // Malformed JSON: missing a closing quote for the name value
+        String malformedJson = "{ \"title\": \"Invalid Project, \"description\": \"This is malformed JSON\" }";
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/projects"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(malformedJson))
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        // Assuming the server returns 400 for malformed JSON
+        assertEquals(400, response.statusCode());
+        System.out.println("Response body: " + response.body());
+    }
+
+    @Test
+    public void testMalformedXmlPayload() throws IOException, InterruptedException {
+        // Malformed XML: missing a closing tag for <name>
+        String malformedXml = "<project><title>Invalid Project<description>This is malformed XML</description></project>";
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/projects"))
+                .header("Content-Type", "application/xml")
+                .POST(HttpRequest.BodyPublishers.ofString(malformedXml))
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        // Assuming the server returns 400 for malformed XML
+        assertEquals(400, response.statusCode());
+        System.out.println("Response body: " + response.body());
+    }
+
+
 }
 
