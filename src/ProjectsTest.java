@@ -272,6 +272,7 @@ public class ProjectsTest {
 
     @Test
     public void testDeleteLinkBetweenProjectAndCategory() throws IOException, InterruptedException {
+        String requestBody = "{ \"id\": \"2\" }";
         System.out.println(categoryId);
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:4567/projects/1/categories/3" ))
@@ -335,6 +336,7 @@ public class ProjectsTest {
 
     @Test
     public void testDeleteTaskLinkWithProject() throws IOException, InterruptedException {
+        String requestBody = "{ \"id\": \"8\" }";
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:4567/projects/1/tasks/2"))
                 .DELETE()
