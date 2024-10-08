@@ -1,3 +1,4 @@
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -340,7 +341,19 @@ public class TodosTest {
         assertEquals(200, response.statusCode());
         System.out.println(response.body());
     }
+    // test fails as expected from the exploratory testing
+    @Test
+    public void testGetTasksofInvalidTodoId() throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/todos/999/tasksof"))
+                .header("Content-Type", "application/json")
+                .GET()
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
+        assertEquals(404, response.statusCode(), "Expected a 404 Not Found status code for invalid todo ID.");
+
+    }
     @Test
     public void testHeadTasksOfTodo() throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
@@ -385,10 +398,13 @@ public class TodosTest {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:4567/todos?doneStatus=true"))
                 .GET().build();
-
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         assertEquals(200, response.statusCode());
-        System.out.println(response.body());
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode jsonResponse = objectMapper.readTree(response.body());
+        JsonNode todosArray = jsonResponse.get("todos");
+        assertTrue(todosArray.size() == 0);
     }
 
     @Test
@@ -400,5 +416,10 @@ public class TodosTest {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         assertEquals(200, response.statusCode());
         System.out.println(response.body());
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode jsonResponse = objectMapper.readTree(response.body());
+        JsonNode todosArray = jsonResponse.get("todos");
+        System.out.println(todosArray);
+        assertTrue(todosArray.size() > 0);
     }
 }
