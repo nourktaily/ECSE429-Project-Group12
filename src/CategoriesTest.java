@@ -297,7 +297,19 @@ public class CategoriesTest {
     @Test
     public void testGetCategoriesByInvalidTitle() throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/categories?title=DoesntExist"))
+                .uri(URI.create("http://localhost:4567/categories?title=NotExist"))
+                .GET().build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertNotEquals(400, response.statusCode());
+        System.out.println(response.body());
+    }
+
+    // queries invalid working
+    @Test
+    public void testGetCategoriesByInvalidTitleWorking() throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/categories?title=NotExist"))
                 .GET().build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
@@ -320,7 +332,7 @@ public class CategoriesTest {
         assertEquals(400, response.statusCode());
         System.out.println("Response body: " + response.body());
     }
-    
+
     // test for malformed XML
     @Test
     public void testMalformedXmlPayload() throws IOException, InterruptedException {
