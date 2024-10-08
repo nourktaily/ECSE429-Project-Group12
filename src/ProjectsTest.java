@@ -1,8 +1,5 @@
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
 import java.io.IOException;
 import java.net.URI;
@@ -11,6 +8,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
 import static org.junit.jupiter.api.Assertions.*;
+
+@TestMethodOrder(MethodOrderer.Random.class)
 
 public class ProjectsTest {
     
@@ -21,12 +20,23 @@ public class ProjectsTest {
 
     public static String categoryId = "0";
     public static String taskId = "0";
+
+    public static String projectId = "0";
+
+    public static String createdProjectId = "0";
+
     @BeforeEach
     public void setup() throws IOException, InterruptedException {
         client = HttpClient.newHttpClient();
         objectMapper = new ObjectMapper();
         categoryId = createCategoryAndGetId();
         taskId = createTaskAndReturnId();
+        projectId = createProjectAndReturnId();
+    }
+
+    @AfterEach
+    public void restore() throws IOException, InterruptedException {
+        deleteProjectById(projectId);
     }
 
     //test to check if the system is ready to be tested
@@ -40,8 +50,18 @@ public class ProjectsTest {
         assertEquals(302, response.statusCode(), "Expected redirect from main page");
     }
 
+    private static void deleteProjectById(String projectId) throws IOException, InterruptedException {
+        String id = createProjectAndReturnId();
+        HttpRequest deleteRequest = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/projects/" + id))
+                .DELETE()
+                .build();
 
+        HttpClient client = HttpClient.newHttpClient();
+        HttpResponse<String> deleteResponse = client.send(deleteRequest, HttpResponse.BodyHandlers.ofString());
 
+        assertEquals(200, deleteResponse.statusCode(), "Failed to delete project with id: " + projectId);
+    }
 
     private static String createCategoryAndGetId() throws IOException, InterruptedException {
         String categoryRequestBody = "{ \"title\": \"Category Title\", \"description\": \"Category Description\" }";
@@ -67,6 +87,27 @@ public class ProjectsTest {
         assertEquals(201, response.statusCode());
         return id;
     }
+    private static String createProjectAndReturnId() throws IOException, InterruptedException {
+        String projectRequestBody = "{ \"title\": \"Project Title\", \"active\": false, \"completed\": false, \"description\": \"Project Description\" }";
+
+        HttpRequest projectRequest = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/projects"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(projectRequestBody))
+                .build();
+
+        HttpClient client = HttpClient.newHttpClient();
+        HttpResponse<String> projectResponse = client.send(projectRequest, HttpResponse.BodyHandlers.ofString());
+
+        assertEquals(201, projectResponse.statusCode());
+
+        String responseBody = projectResponse.body();
+        String id = new ObjectMapper().readTree(responseBody).get("id").asText();
+
+        return id;
+    }
+
+
     private static String createTaskAndReturnId() throws IOException, InterruptedException {
         String requestBody = "{ \"id\": \"2\" }";
         HttpRequest request = HttpRequest.newBuilder()
@@ -141,12 +182,17 @@ public class ProjectsTest {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         assertEquals(201, response.statusCode());
         System.out.println(response.body());
+
+        String responseBody = response.body();
+        ObjectMapper objectMapper = new ObjectMapper();
+        String id = objectMapper.readTree(responseBody).get("id").asText();
+        deleteProjectById(id);
     }
 
     @Test
     public void testGetNonExistentProject() throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/projects/8"))
+                .uri(URI.create("http://localhost:4567/projects/-1"))
                 .GET().build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
@@ -168,7 +214,7 @@ public class ProjectsTest {
     @Test
     public void testCreateProjectWithIncorrectId() throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/projects/7"))
+                .uri(URI.create("http://localhost:4567/projects/-1"))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString("")) // Empty body
                 .build();
@@ -181,7 +227,7 @@ public class ProjectsTest {
     public void testUpdateProject() throws IOException, InterruptedException {
         String requestBody = "{ \"title\": \" new title \", \"active\": false, \"completed\": false, \"description\": \"new description\"}";
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/projects/2"))
+                .uri(URI.create("http://localhost:4567/projects/" + projectId))
                 .header("Content-Type", "application/json")
                 .PUT(HttpRequest.BodyPublishers.ofString(requestBody)) // Empty body
                 .build();
@@ -195,13 +241,13 @@ public class ProjectsTest {
     public void testUpdateProjectCompletedOnly() throws IOException, InterruptedException {
         String requestBody = "{ \"Completed\": true }";
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/projects/7"))
+                .uri(URI.create("http://localhost:4567/projects/" + projectId))
                 .header("Content-Type", "application/json")
                 .PUT(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        assertEquals(404, response.statusCode());
+        assertEquals(200, response.statusCode());
         System.out.println(response.body());
     }
 
@@ -209,7 +255,7 @@ public class ProjectsTest {
     public void testUpdateProjectWithAllFields() throws IOException, InterruptedException {
         String requestBody = "{ \"title\": \"Updated Title\", \"active\": true, \"completed\": false, \"description\": \"Updated Description\" }";
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/projects/1"))
+                .uri(URI.create("http://localhost:4567/projects/" + projectId))
                 .header("Content-Type", "application/json")
                 .PUT(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
@@ -222,7 +268,7 @@ public class ProjectsTest {
     @Test
     public void testDeleteProject() throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/projects/2"))
+                .uri(URI.create("http://localhost:4567/projects/"+ projectId))
                 .DELETE()
                 .build();
 
@@ -235,7 +281,7 @@ public class ProjectsTest {
     public void testUpdateProjectTitle() throws IOException, InterruptedException {
         String requestBody = "{ \"title\": \"New title\" }";
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/projects/1"))
+                .uri(URI.create("http://localhost:4567/projects/" + projectId))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
@@ -249,7 +295,7 @@ public class ProjectsTest {
     public void testUpdateNonExistentProject() throws IOException, InterruptedException {
         String requestBody = "{ \"title\": \"Title\" }";
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/projects/32"))
+                .uri(URI.create("http://localhost:4567/projects/-1"))
                 .header("Content-Type", "application/json")
                 .PUT(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
@@ -312,7 +358,6 @@ public class ProjectsTest {
     @Test
     public void testDeleteLinkBetweenProjectAndCategory() throws IOException, InterruptedException {
         String requestBody = "{ \"id\": \"2\" }";
-        System.out.println(categoryId);
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:4567/projects/1/categories/" +categoryId ))
                 .DELETE()
