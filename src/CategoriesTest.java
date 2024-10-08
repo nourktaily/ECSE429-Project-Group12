@@ -281,5 +281,60 @@ public class CategoriesTest {
         System.out.println(response.body());
     }
 
+    // queries valid
+    @Test
+    public void testGetCategoriesByValidTitle() throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/categories?title=Home"))
+                .GET().build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(200, response.statusCode());
+        System.out.println(response.body());
+    }
+
+    // queries invalid
+    @Test
+    public void testGetCategoriesByInvalidTitle() throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/categories?title=DoesntExist"))
+                .GET().build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(200, response.statusCode());
+        System.out.println(response.body());
+    }
+
+    // test for malformed JSON
+    @Test
+    public void testMalformedJsonPayload() throws IOException, InterruptedException {
+        String malformedJson = "{ \"title\": \"Invalid Project, \"description\": \"This is malformed JSON\" }";
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/categories"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(malformedJson))
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(400, response.statusCode());
+        System.out.println("Response body: " + response.body());
+    }
+    
+    // test for malformed XML
+    @Test
+    public void testMalformedXmlPayload() throws IOException, InterruptedException {
+        String malformedXml = "<category><title>Invalid Project<description>This is malformed XML</description></category>";
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/categories"))
+                .header("Content-Type", "application/xml")
+                .POST(HttpRequest.BodyPublishers.ofString(malformedXml))
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(400, response.statusCode());
+        System.out.println("Response body: " + response.body());
+    }
 }
 
