@@ -1,3 +1,4 @@
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -277,7 +278,22 @@ public class TodosTest {
         assertEquals(200, response.statusCode());
     }
 
+    @Test
+    public void testUpdateTodoWithMissingTitleField() throws IOException, InterruptedException {
+        String requestBody = "{ \"doneStatus\": false }";
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/todos/7"))
+                .header("Content-Type", "application/json")
+                .PUT(HttpRequest.BodyPublishers.ofString(requestBody))
+                .build();
 
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        // Assert that the response is not successful (expecting an error)
+        assertNotEquals(200, response.statusCode(), "Expected to fail when updating without title field.");
+        System.out.println("Response status code: " + response.statusCode());
+        System.out.println("Response body: " + response.body());
+    }
     @Test
     public void testCreateLinkBetweenTodoAndCategory() throws IOException, InterruptedException {
         String requestBody = "{ \"Id\": \"" + categoryId + "\" }";
@@ -342,6 +358,18 @@ public class TodosTest {
     }
 
     @Test
+    public void testGetTasksofInvalidTodoId() throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/todos/999/tasksof"))
+                .header("Content-Type", "application/json")
+                .GET()
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        // Assert that the response is not successful (expecting an error)
+        assertNotEquals(404, response.statusCode(), "Expected a 404 Not Found status code for invalid todo ID.");
+
+    }
+    @Test
     public void testHeadTasksOfTodo() throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:4567/todos/1/tasksof"))
@@ -385,10 +413,13 @@ public class TodosTest {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:4567/todos?doneStatus=true"))
                 .GET().build();
-
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         assertEquals(200, response.statusCode());
-        System.out.println(response.body());
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode jsonResponse = objectMapper.readTree(response.body());
+        JsonNode todosArray = jsonResponse.get("todos");
+        assertTrue(todosArray.size() == 0);
     }
 
     @Test
@@ -400,5 +431,45 @@ public class TodosTest {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         assertEquals(200, response.statusCode());
         System.out.println(response.body());
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode jsonResponse = objectMapper.readTree(response.body());
+        JsonNode todosArray = jsonResponse.get("todos");
+        System.out.println(todosArray);
+        assertTrue(todosArray.size() > 0);
+    }
+    @Test
+    public void testMalformedJsonPayload() throws IOException, InterruptedException {
+        // Malformed JSON: missing a closing quote for the name value
+        String malformedJson = "{ \"title\": \"Invalid Project, \"description\": \"This is malformed JSON\" }";
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/todos"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(malformedJson))
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        // Assuming the server returns 400 for malformed JSON
+        assertEquals(400, response.statusCode());
+        System.out.println("Response body: " + response.body());
+    }
+
+    @Test
+    public void testMalformedXmlPayload() throws IOException, InterruptedException {
+        // Malformed XML: missing a closing tag for <name>
+        String malformedXml = "<project><title>Invalid Project<description>This is malformed XML</description></project>";
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/todos"))
+                .header("Content-Type", "application/xml")
+                .POST(HttpRequest.BodyPublishers.ofString(malformedXml))
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        // Assuming the server returns 400 for malformed XML
+        assertEquals(400, response.statusCode());
+        System.out.println("Response body: " + response.body());
     }
 }
