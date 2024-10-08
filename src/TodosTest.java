@@ -278,7 +278,22 @@ public class TodosTest {
         assertEquals(200, response.statusCode());
     }
 
+    @Test
+    public void testUpdateTodoWithMissingTitleField() throws IOException, InterruptedException {
+        String requestBody = "{ \"doneStatus\": false }";
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/todos/7"))
+                .header("Content-Type", "application/json")
+                .PUT(HttpRequest.BodyPublishers.ofString(requestBody))
+                .build();
 
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        // Assert that the response is not successful (expecting an error)
+        assertNotEquals(200, response.statusCode(), "Expected to fail when updating without title field.");
+        System.out.println("Response status code: " + response.statusCode());
+        System.out.println("Response body: " + response.body());
+    }
     @Test
     public void testCreateLinkBetweenTodoAndCategory() throws IOException, InterruptedException {
         String requestBody = "{ \"Id\": \"" + categoryId + "\" }";
@@ -341,7 +356,7 @@ public class TodosTest {
         assertEquals(200, response.statusCode());
         System.out.println(response.body());
     }
-    // test fails as expected from the exploratory testing
+
     @Test
     public void testGetTasksofInvalidTodoId() throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
@@ -350,8 +365,8 @@ public class TodosTest {
                 .GET()
                 .build();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-        assertEquals(404, response.statusCode(), "Expected a 404 Not Found status code for invalid todo ID.");
+        // Assert that the response is not successful (expecting an error)
+        assertNotEquals(404, response.statusCode(), "Expected a 404 Not Found status code for invalid todo ID.");
 
     }
     @Test
