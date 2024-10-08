@@ -16,10 +16,29 @@ public class ProjectsTest {
 
     private HttpClient client;
     private ObjectMapper objectMapper;
+
+    public static String categoryId = "0";
     @BeforeEach
     public void setup() {
         client = HttpClient.newHttpClient();
         objectMapper = new ObjectMapper();
+    }
+
+    public void createCategory() throws IOException, InterruptedException {
+        String categoryRequestBody = "{ \"title\": \"Category Title\", \"description\": \"Category Description\" }";
+        HttpRequest categoryRequest = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/categories"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(categoryRequestBody))
+                .build();
+
+        HttpResponse<String> categoryResponse = client.send(categoryRequest, HttpResponse.BodyHandlers.ofString());
+        assertEquals(201, categoryResponse.statusCode());
+
+        // Extract the category ID from the response body
+        String responseBody = categoryResponse.body();
+        categoryId = objectMapper.readTree(responseBody).get("id").asText();
+        System.out.println("Category Created with ID: " + categoryId);
     }
 
     @Test
@@ -163,7 +182,7 @@ public class ProjectsTest {
     @Test
     public void testDeleteProject() throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/projects/1"))
+                .uri(URI.create("http://localhost:4567/projects/2"))
                 .DELETE()
                 .build();
 
@@ -224,32 +243,22 @@ public class ProjectsTest {
 
     @Test
     public void testCreateLinkBetweenProjectAndCategory() throws IOException, InterruptedException {
-        String requestBody = "{ \"id\": \"1\" }";  // Assuming category 1 exists
-
-        HttpRequest createLinkRequest = HttpRequest.newBuilder()
+        createCategory();
+        String requestBody = "{ \"id\": \"" + categoryId + "\" }";
+        HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:4567/projects/1/categories"))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
 
-        HttpResponse<String> createLinkResponse = client.send(createLinkRequest, HttpResponse.BodyHandlers.ofString());
-        assertEquals(201, createLinkResponse.statusCode(), "Failed to create link between project and category");
-
-        HttpRequest deleteRequest = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/projects/1/categories/1"))
-                .DELETE()
-                .build();
-
-        HttpResponse<String> deleteResponse = client.send(deleteRequest, HttpResponse.BodyHandlers.ofString());
-
-        assertEquals(200, deleteResponse.statusCode(), "Failed to delete link between project and category");
-
-        System.out.println(deleteResponse.body());
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(201, response.statusCode());
+        System.out.println(response.body());
     }
 
     @Test
     public void testCreateLinkBetweenProjectAndInvalidCategoryId() throws IOException, InterruptedException {
-        String requestBody = "{ \"Id\": \"999\" }";
+        String requestBody = "{ \"id\": \"999\" }";
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:4567/projects/1/categories"))
                 .header("Content-Type", "application/json")
@@ -263,57 +272,16 @@ public class ProjectsTest {
 
     @Test
     public void testDeleteLinkBetweenProjectAndCategory() throws IOException, InterruptedException {
-        // Step 1: Ensure the project exists
-        String projectBody = "{ \"title\": \"Test Project\", \"description\": \"A sample project\" }";
-
-        HttpRequest createProjectRequest = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/projects"))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(projectBody))
-                .build();
-
-        HttpResponse<String> createProjectResponse = client.send(createProjectRequest, HttpResponse.BodyHandlers.ofString());
-        assertTrue(createProjectResponse.statusCode() == 201 || createProjectResponse.statusCode() == 200,
-                "Failed to create or confirm project");
-
-        // Step 2: Ensure the category exists
-        String categoryBody = "{ \"name\": \"Test Category\" }";
-
-        HttpRequest createCategoryRequest = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/categories"))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(categoryBody))
-                .build();
-
-        HttpResponse<String> createCategoryResponse = client.send(createCategoryRequest, HttpResponse.BodyHandlers.ofString());
-        assertTrue(createCategoryResponse.statusCode() == 201 || createCategoryResponse.statusCode() == 200,
-                "Failed to create or confirm category");
-
-        // Step 3: Create the link between the project and category
-        String requestBody = "{ \"id\": \"1\" }";  // Assuming we want to link category 1
-
-        HttpRequest createLinkRequest = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/projects/1/categories"))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                .build();
-
-        HttpResponse<String> createLinkResponse = client.send(createLinkRequest, HttpResponse.BodyHandlers.ofString());
-        assertEquals(201, createLinkResponse.statusCode(), "Failed to create link between project and category");
-
-        // Step 4: Now, delete the link between the project and the category
-        HttpRequest deleteRequest = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/projects/1/categories/1"))
+        System.out.println(categoryId);
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/projects/1/categories/3" ))
                 .DELETE()
                 .build();
 
-        HttpResponse<String> deleteResponse = client.send(deleteRequest, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(200, response.statusCode());
+        System.out.println(response.body());
 
-        // Verify that the deletion was successful
-        assertEquals(200, deleteResponse.statusCode(), "Failed to delete link between project and category");
-
-        // Optionally, print the response body for debugging purposes
-        System.out.println(deleteResponse.body());
     }
 
 
@@ -353,7 +321,7 @@ public class ProjectsTest {
 
     @Test
     public void testCreateNewTasksLinkWithProject() throws IOException, InterruptedException {
-        String requestBody = "{ \"Id\": \"1\" }";
+        String requestBody = "{ \"id\": \"2\" }";
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:4567/projects/1/tasks"))
                 .header("Content-Type", "application/json")
@@ -368,7 +336,7 @@ public class ProjectsTest {
     @Test
     public void testDeleteTaskLinkWithProject() throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/projects/1/tasks/1"))
+                .uri(URI.create("http://localhost:4567/projects/1/tasks/2"))
                 .DELETE()
                 .build();
 
