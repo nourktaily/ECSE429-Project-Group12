@@ -148,11 +148,22 @@ public class TodosTest {
                 .build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        String responseBody = response.body();
+        // delete the created object
+        String todoId_delete = new ObjectMapper().readTree(responseBody).get("id").asText();
+        HttpRequest request_delete = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/todos/" + todoId_delete))
+                .DELETE()
+                .build();
+
+        HttpResponse<String> response_delete = client.send(request_delete, HttpResponse.BodyHandlers.ofString());
+        // verify creation
         assertEquals(201, response.statusCode());
         System.out.println(response.body());
     }
     @Test
     public void testDeleteTodo() throws IOException, InterruptedException {
+        //create an object first
         String requestBody = "{ \"title\": \"s aute irure dolor i\", \"doneStatus\": false, \"description\": \"sse cillum dolore eu\" }";
         HttpRequest request_create = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:4567/todos"))
@@ -161,8 +172,9 @@ public class TodosTest {
                 .build();
         HttpClient client = HttpClient.newHttpClient();
         HttpResponse<String> response_create = client.send(request_create, HttpResponse.BodyHandlers.ofString());
-        assertEquals(201, response_create.statusCode());
         String responseBody = response_create.body();
+
+        // delete and verify
         String todoId_delete = new ObjectMapper().readTree(responseBody).get("id").asText();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:4567/todos/" + todoId_delete))
