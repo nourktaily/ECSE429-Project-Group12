@@ -1,4 +1,5 @@
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -18,13 +19,17 @@ public class ProjectsTest {
     private ObjectMapper objectMapper;
 
     public static String categoryId = "0";
+    public static String taskId = "0";
     @BeforeEach
-    public void setup() {
+    public void setup() throws IOException, InterruptedException {
         client = HttpClient.newHttpClient();
         objectMapper = new ObjectMapper();
+        categoryId = createCategoryAndGetId();
+        taskId = createTaskAndReturnId();
     }
 
-    public void createCategory() throws IOException, InterruptedException {
+
+    private static String createCategoryAndGetId() throws IOException, InterruptedException {
         String categoryRequestBody = "{ \"title\": \"Category Title\", \"description\": \"Category Description\" }";
         HttpRequest categoryRequest = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:4567/categories"))
@@ -32,13 +37,34 @@ public class ProjectsTest {
                 .POST(HttpRequest.BodyPublishers.ofString(categoryRequestBody))
                 .build();
 
+        HttpClient client = HttpClient.newHttpClient();
         HttpResponse<String> categoryResponse = client.send(categoryRequest, HttpResponse.BodyHandlers.ofString());
         assertEquals(201, categoryResponse.statusCode());
 
-        // Extract the category ID from the response body
         String responseBody = categoryResponse.body();
-        categoryId = objectMapper.readTree(responseBody).get("id").asText();
-        System.out.println("Category Created with ID: " + categoryId);
+        String id = new ObjectMapper().readTree(responseBody).get("id").asText();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/projects/1/categories"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString("{ \"id\": \"" + id + "\" }"))
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(201, response.statusCode());
+        return id;
+    }
+    private static String createTaskAndReturnId() throws IOException, InterruptedException {
+        String requestBody = "{ \"id\": \"2\" }";
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/projects/1/tasks"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                .build();
+
+        HttpClient client = HttpClient.newHttpClient();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(201, response.statusCode());
+        return "2";
     }
 
     @Test
@@ -243,7 +269,6 @@ public class ProjectsTest {
 
     @Test
     public void testCreateLinkBetweenProjectAndCategory() throws IOException, InterruptedException {
-        createCategory();
         String requestBody = "{ \"id\": \"" + categoryId + "\" }";
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:4567/projects/1/categories"))
@@ -275,7 +300,7 @@ public class ProjectsTest {
         String requestBody = "{ \"id\": \"2\" }";
         System.out.println(categoryId);
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:4567/projects/1/categories/3" ))
+                .uri(URI.create("http://localhost:4567/projects/1/categories/" +categoryId ))
                 .DELETE()
                 .build();
 
@@ -336,7 +361,6 @@ public class ProjectsTest {
 
     @Test
     public void testDeleteTaskLinkWithProject() throws IOException, InterruptedException {
-        String requestBody = "{ \"id\": \"8\" }";
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:4567/projects/1/tasks/2"))
                 .DELETE()
