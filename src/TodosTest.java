@@ -14,13 +14,13 @@ import static org.junit.jupiter.api.Assertions.*;
 public class TodosTest {
 
     private final HttpClient client = HttpClient.newHttpClient();
-    ObjectMapper objectMapper = new ObjectMapper();
     public static String categoryId = "0";
     public static String taskId = "0";
 
     @BeforeAll
     public static void setup() throws IOException, InterruptedException {
         taskId = createTaskOfTodo();
+        categoryId = createCategory();
     }
        public static String createTaskOfTodo() throws IOException, InterruptedException {
         // Initialize the HttpClient
@@ -48,7 +48,10 @@ public class TodosTest {
     }
 
 
-    public void createCategory() throws IOException, InterruptedException {
+
+    public static String createCategory() throws IOException, InterruptedException {
+        // Initialize the HttpClient
+        HttpClient client = HttpClient.newHttpClient();
         String categoryRequestBody = "{ \"title\": \"Category Title\", \"description\": \"Category Description\" }";
         HttpRequest categoryRequest = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:4567/categories"))
@@ -61,8 +64,18 @@ public class TodosTest {
 
         // Extract the category ID from the response body
         String responseBody = categoryResponse.body();
-        categoryId = objectMapper.readTree(responseBody).get("id").asText();
-        System.out.println("Category Created with ID: " + categoryId);
+        String id = new ObjectMapper().readTree(responseBody).get("id").asText();
+
+        String linkBody = "{ \"Id\": \"" + id + "\" }";
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:4567/todos/1/categories"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(linkBody))
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        assertEquals(201, response.statusCode());
+        return id;
     }
     @Test
     public void testGetAllTodos() throws IOException, InterruptedException {
@@ -267,7 +280,6 @@ public class TodosTest {
 
     @Test
     public void testCreateLinkBetweenTodoAndCategory() throws IOException, InterruptedException {
-        createCategory();
         String requestBody = "{ \"Id\": \"" + categoryId + "\" }";
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:4567/todos/1/categories"))
